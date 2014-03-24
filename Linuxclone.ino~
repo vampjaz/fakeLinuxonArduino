@@ -3,6 +3,7 @@
 
 #include <TVout.h>
 #include <fontALL.h>
+#include <ps2.h>
 
 #include <SD.h>
 
