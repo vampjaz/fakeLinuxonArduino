@@ -3,6 +3,16 @@ Fake Linux On Arduino
 
 This is in the preliminary phases.
 
+**Commands implemented:**
+
+* ls
+* df
+* halt
+* cat - untested
+* uptime
+
+None of these commands support all of their Linux counterparts' options.
+
 **Libraries required:**
 
 * USB - for interacting with the keyboard
