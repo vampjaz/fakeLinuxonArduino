@@ -105,7 +105,9 @@ void KbdRptParser::OnKeyPressed(uint8_t key)
         TV.println();
 //do command
         if (cmd == "ls") {
-            File root = SD.open(cd);
+            char filename[cd.length()+1];
+            cd.toCharArray(filename, sizeof(filename));
+            File root = SD.open(filename);
             while(true) {
      
              File entry =  root.openNextFile();
@@ -145,25 +147,35 @@ void KbdRptParser::OnKeyPressed(uint8_t key)
             exit(0);
         }
         else if (cmd == "cat") {
-            File f = SD.open(cd + opts);
+            String temp = cd+opts;
+            char filename[temp.length()+1];
+            temp.toCharArray(filename, sizeof(filename));
+            File dataFile = SD.open(filename);
             if (dataFile) {
    		 while (dataFile.available()) {
    		   TV.write(dataFile.read());
   		  }
   		  dataFile.close();
- 	   } else {
- 	   	TV.print("File not found");
- 	   }
+ 	      } else {
+ 	       	TV.println("File not found");
+ 	       }
   
+        }
+        else if (cmd == "cd") {
+            cd = opts;
         }
        // Serial.println(cmd);
         //TV.println();
-        TV.print("root@arduino:"+cd+"$ ");
+        char filename[cd.length()+1];
+        cd.toCharArray(filename, sizeof(filename));
+        TV.print("root@arduino:");
+        TV.print(filename);
+        TV.print("$ ");
         cmd = "";
     } else {
     	if ((char)key == ' ') {
     	  op = true;
-    	} else {
+    	}
     	if (op) {
     	  opts += (char)key;
     	} else {
@@ -171,7 +183,7 @@ void KbdRptParser::OnKeyPressed(uint8_t key)
         }
         TV.print(key);
         
-      }
+      
     }
 };
 
@@ -200,7 +212,7 @@ void setup()
 
     TV.begin(_NTSC,140,96);
     TV.select_font(font6x8);
-    TV.print("root@arduino:~$ ");
+    TV.print("root@arduino:/$ ");
 
     cmd = "";
     opts = "";
