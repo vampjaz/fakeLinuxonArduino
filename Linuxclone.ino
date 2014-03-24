@@ -10,6 +10,10 @@
 TVout TV;
 
 String cmd;
+String opts;
+boolean op;
+
+String cd;
 
 class KbdRptParser : public KeyboardReportParser
 {
@@ -101,7 +105,7 @@ void KbdRptParser::OnKeyPressed(uint8_t key)
         TV.println();
 //do command
         if (cmd == "ls") {
-            File root = SD.open("/");
+            File root = SD.open(cd);
             while(true) {
      
              File entry =  root.openNextFile();
@@ -136,17 +140,38 @@ void KbdRptParser::OnKeyPressed(uint8_t key)
         }
         else if (cmd == "halt") {
             TV.print("[");
-            TV.print(millis()/1000);
+            TV.print(millis()/1000.0);
             TV.print("]: System halted");
             exit(0);
         }
+        else if (cmd == "cat") {
+            File f = SD.open(cd + opts);
+            if (dataFile) {
+   		 while (dataFile.available()) {
+   		   TV.write(dataFile.read());
+  		  }
+  		  dataFile.close();
+ 	   } else {
+ 	   	TV.print("File not found");
+ 	   }
+  
+        }
        // Serial.println(cmd);
         //TV.println();
-        TV.print("root@arduino:~$ ");
+        TV.print("root@arduino:"+cd+"$ ");
         cmd = "";
     } else {
-        cmd += (char)key;
+    	if ((char)key == ' ') {
+    	  op = true;
+    	} else {
+    	if (op) {
+    	  opts += (char)key;
+    	} else {
+          cmd += (char)key;
+        }
         TV.print(key);
+        
+      }
     }
 };
 
@@ -178,6 +203,10 @@ void setup()
     TV.print("root@arduino:~$ ");
 
     cmd = "";
+    opts = "";
+    op = false;
+    
+    cd = "/";
 
     pinMode(53,OUTPUT);
 
