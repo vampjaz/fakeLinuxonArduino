@@ -8,7 +8,7 @@ This is in the preliminary phases.
 * ls
 * df
 * halt
-* cat - untested
+* cat - buggy
 * uptime
 
 None of these commands support all of their Linux counterparts' options.
