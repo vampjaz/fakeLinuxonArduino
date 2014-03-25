@@ -10,6 +10,7 @@ This is in the preliminary phases.
 * halt
 * cat - buggy
 * uptime
+* cd - buggy
 
 None of these commands support all of their Linux counterparts' options.
 

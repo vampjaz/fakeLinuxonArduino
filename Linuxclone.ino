@@ -6,7 +6,6 @@
 
 #include <SD.h>
 
-
 TVout TV;
 
 String cmd;
@@ -15,42 +14,13 @@ boolean op;
 
 String cd;
 
-class KbdRptParser : public KeyboardReportParser
-{
-        void PrintKey(uint8_t mod, uint8_t key);
+uint32_t next_time;
 
-protected:
-        virtual void OnControlKeysChanged(uint8_t before, uint8_t after);
+USB     Usb;
+//USBHub     Hub(&Usb);
+HIDBoot<HID_PROTOCOL_KEYBOARD>    HidKeyboard(&Usb);
 
-	virtual void OnKeyDown	(uint8_t mod, uint8_t key);
-	virtual void OnKeyUp	(uint8_t mod, uint8_t key);
-	virtual void OnKeyPressed(uint8_t key);
-};
-
-void KbdRptParser::PrintKey(uint8_t m, uint8_t key)
-{
-    //empty
-};
-
-void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
-{
-    //empty
-}
-
-void KbdRptParser::OnControlKeysChanged(uint8_t before, uint8_t after) {
-
-    //empty
-
-}
-
-void KbdRptParser::OnKeyUp(uint8_t mod, uint8_t key)
-{
-    //empty
-}
-
-void KbdRptParser::OnKeyPressed(uint8_t key)
-{
-    
+void keypress(uint8_t key) {
     if(key < 30) {
         TV.println();
 //do command
@@ -102,13 +72,13 @@ void KbdRptParser::OnKeyPressed(uint8_t key)
             temp.toCharArray(filename, sizeof(filename));
             File dataFile = SD.open(filename);
             if (dataFile) {
-   		 while (dataFile.available()) {
-   		   TV.write(dataFile.read());
-  		  }
-  		  dataFile.close();
- 	      } else {
- 	       	TV.println("File not found");
- 	       }
+         while (dataFile.available()) {
+           TV.write(dataFile.read());
+          }
+          dataFile.close();
+          } else {
+            TV.println("File not found");
+           }
   
         }
         else if (cmd == "cd") {
@@ -125,25 +95,108 @@ void KbdRptParser::OnKeyPressed(uint8_t key)
         opts = "";
         op = false;
     } else {
-    	if ((char)key == ' ') {
-    	  op = true;
-    	}
-    	if (op) {
-    	  opts += (char)key;
-    	} else {
+        if ((char)key == ' ') {
+          op = true;
+        }
+        if (op) {
+          opts += (char)key;
+        } else {
           cmd += (char)key;
         }
         TV.print(key);
         
       
     }
+}
+
+class KbdRptParser : public KeyboardReportParser
+{
+        void PrintKey(uint8_t mod, uint8_t key);
+
+protected:
+        virtual void OnControlKeysChanged(uint8_t before, uint8_t after);
+
+    virtual void OnKeyDown  (uint8_t mod, uint8_t key);
+    virtual void OnKeyUp    (uint8_t mod, uint8_t key);
+    virtual void OnKeyPressed(uint8_t key);
 };
 
-USB     Usb;
-//USBHub     Hub(&Usb);
-HIDBoot<HID_PROTOCOL_KEYBOARD>    HidKeyboard(&Usb);
+void KbdRptParser::PrintKey(uint8_t m, uint8_t key)
+{
+    MODIFIERKEYS mod;
+    *((uint8_t*)&mod) = m;
+    Serial.print((mod.bmLeftCtrl   == 1) ? "C" : " ");
+    Serial.print((mod.bmLeftShift  == 1) ? "S" : " ");
+    Serial.print((mod.bmLeftAlt    == 1) ? "A" : " ");
+    Serial.print((mod.bmLeftGUI    == 1) ? "G" : " ");
 
-uint32_t next_time;
+    Serial.print(" >");
+    PrintHex<uint8_t>(key, 0x80);
+    Serial.print("< ");
+
+    Serial.print((mod.bmRightCtrl   == 1) ? "C" : " ");
+    Serial.print((mod.bmRightShift  == 1) ? "S" : " ");
+    Serial.print((mod.bmRightAlt    == 1) ? "A" : " ");
+    Serial.println((mod.bmRightGUI    == 1) ? "G" : " ");
+};
+
+void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
+{
+    Serial.print("DN ");
+    PrintKey(mod, key);
+    uint8_t c = OemToAscii(mod, key);
+
+    if (c)
+        OnKeyPressed(c);
+}
+
+void KbdRptParser::OnControlKeysChanged(uint8_t before, uint8_t after) {
+
+    MODIFIERKEYS beforeMod;
+    *((uint8_t*)&beforeMod) = before;
+
+    MODIFIERKEYS afterMod;
+    *((uint8_t*)&afterMod) = after;
+
+    if (beforeMod.bmLeftCtrl != afterMod.bmLeftCtrl) {
+        Serial.println("LeftCtrl changed");
+    }
+    if (beforeMod.bmLeftShift != afterMod.bmLeftShift) {
+        Serial.println("LeftShift changed");
+    }
+    if (beforeMod.bmLeftAlt != afterMod.bmLeftAlt) {
+        Serial.println("LeftAlt changed");
+    }
+    if (beforeMod.bmLeftGUI != afterMod.bmLeftGUI) {
+        Serial.println("LeftGUI changed");
+    }
+
+    if (beforeMod.bmRightCtrl != afterMod.bmRightCtrl) {
+        Serial.println("RightCtrl changed");
+    }
+    if (beforeMod.bmRightShift != afterMod.bmRightShift) {
+        Serial.println("RightShift changed");
+    }
+    if (beforeMod.bmRightAlt != afterMod.bmRightAlt) {
+        Serial.println("RightAlt changed");
+    }
+    if (beforeMod.bmRightGUI != afterMod.bmRightGUI) {
+        Serial.println("RightGUI changed");
+    }
+
+}
+
+void KbdRptParser::OnKeyUp(uint8_t mod, uint8_t key)
+{
+    Serial.print("UP ");
+    PrintKey(mod, key);
+}
+
+void KbdRptParser::OnKeyPressed(uint8_t key)
+{
+    keypress(key);
+    
+};
 
 KbdRptParser Prs;
 
@@ -158,11 +211,14 @@ void setup()
 
     delay( 200 );
 
-    next_time = millis() + 5000;
+    if (!SD.begin(44)) {
+        return;
+    }
 
+    next_time = millis() + 5000;
     HidKeyboard.SetReportParser(0, (HIDReportParser*)&Prs);
 
-    TV.begin(_NTSC,140,96);
+    TV.begin(_NTSC);
     TV.select_font(font6x8);
     TV.print("root@arduino:/$ ");
 
@@ -174,13 +230,100 @@ void setup()
 
     pinMode(53,OUTPUT);
 
-    if (!SD.begin(44)) {
-        return;
-    }
+    
 }
 
 void loop()
 {
     Usb.Task();
 }
+/*
+void keypress(uint8_t key) {
+    if(key < 30) {
+        TV.println();
+//do command
+        if (cmd == "ls") {
+            char filename[cd.length()+1];
+            cd.toCharArray(filename, sizeof(filename));
+            File root = SD.open(filename);
+            while(true) {
+     
+             File entry =  root.openNextFile();
+             if (! entry) {
+               // no more files
+               //Serial.println("**nomorefiles**");
+               break;
+             }
+             TV.print(entry.name());
+             if (entry.isDirectory()) {
+               TV.println("/");
+             } else {
+               // files have sizes, directories do not
+               TV.print("      ");
+               TV.println(entry.size(), DEC);
+             }
+             entry.close();
+            }
 
+        }
+        else if (cmd == "df") {
+            TV.println("Stats for /:");
+            File root = SD.open("/");
+            TV.print("size: ");
+            TV.println(root.size());
+            root.close();
+        }
+        else if (cmd == "uptime") {
+            TV.print("Up for ");
+            TV.print(millis());
+            TV.println("ms");
+        }
+        else if (cmd == "halt") {
+            TV.print("[");
+            TV.print(millis()/1000.0);
+            TV.print("]: System halted");
+            exit(0);
+        }
+        else if (cmd == "cat") {
+            String temp = cd+opts;
+            char filename[temp.length()+1];
+            temp.toCharArray(filename, sizeof(filename));
+            File dataFile = SD.open(filename);
+            if (dataFile) {
+         while (dataFile.available()) {
+           TV.write(dataFile.read());
+          }
+          dataFile.close();
+          } else {
+            TV.println("File not found");
+           }
+  
+        }
+        else if (cmd == "cd") {
+            cd = opts;
+        }
+       // Serial.println(cmd);
+        //TV.println();
+        char filename[cd.length()+1];
+        cd.toCharArray(filename, sizeof(filename));
+        TV.print("root@arduino:");
+        TV.print(filename);
+        TV.print("$ ");
+        cmd = "";
+        opts = "";
+        op = false;
+    } else {
+        if ((char)key == ' ') {
+          op = true;
+        }
+        if (op) {
+          opts += (char)key;
+        } else {
+          cmd += (char)key;
+        }
+        TV.print(key);
+        
+      
+    }
+}
+*/
